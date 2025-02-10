@@ -35,35 +35,37 @@ def generate_qr():
 
     return jsonify({'qr_url': qr_path})
 
-@app.route('/mark_attendance', methods=['POST'])
+@app.route('/mark_attendance', methods=['GET', 'POST'])
 def mark_attendance():
-    token = request.args.get("token")
-    print(token, 'Heeeey')
-    """Verify location & allow only one device per student per day."""
-    data = request.json
-    student_id = data.get('student_id')
-    scanned_qr = data.get('qr_code')
-    lat, lon = data.get('latitude'), data.get('longitude')
-    user_device = request.remote_addr  # Get student's IP (for device tracking)
-    today = datetime.today().strftime('%Y-%m-%d')
+    if request.method == 'GET':
+        token = request.args.get("token")
+        return f"<h1>Hey User, Attendance {token} marked</h1>"
+    elif request.method == 'POST':
+        """Verify location & allow only one device per student per day."""
+        data = request.json
+        student_id = data.get('student_id')
+        scanned_qr = data.get('qr_code')
+        lat, lon = data.get('latitude'), data.get('longitude')
+        user_device = request.remote_addr  # Get student's IP (for device tracking)
+        today = datetime.today().strftime('%Y-%m-%d')
 
-    # Verify QR Code
-    if scanned_qr != current_qr:
-        return jsonify({'error': 'Invalid QR Code!'}), 400
+        # Verify QR Code
+        if scanned_qr != current_qr:
+            return jsonify({'error': 'Invalid QR Code!'}), 400
 
-    # Verify Location
-    if abs(lat - CLASSROOM_LAT) > GEO_TOLERANCE or abs(lon - CLASSROOM_LON) > GEO_TOLERANCE:
-        return jsonify({'error': 'You are not in class!'}), 403
+        # Verify Location
+        if abs(lat - CLASSROOM_LAT) > GEO_TOLERANCE or abs(lon - CLASSROOM_LON) > GEO_TOLERANCE:
+            return jsonify({'error': 'You are not in class!'}), 403
 
-    # Check if student has already marked attendance today
-    if student_id in attendance_records:
-        record = attendance_records[student_id]
-        if record['date'] == today:
-            return jsonify({'error': 'Attendance already marked from another device!'}), 403
+        # Check if student has already marked attendance today
+        if student_id in attendance_records:
+            record = attendance_records[student_id]
+            if record['date'] == today:
+                return jsonify({'error': 'Attendance already marked from another device!'}), 403
 
-    # Mark attendance
-    attendance_records[student_id] = {'date': today, 'device': user_device}
-    return jsonify({'message': 'Attendance marked successfully!'}), 200
+        # Mark attendance
+        attendance_records[student_id] = {'date': today, 'device': user_device}
+        return jsonify({'message': 'Attendance marked successfully!'}), 200
 
 if __name__ == '__main__':
     app.run(debug=True, port=1008, host='0.0.0.0')
