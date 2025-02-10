@@ -1,7 +1,7 @@
 import qrcode
 import random
 import string
-from flask import Flask, render_template, request, session, jsonify
+from flask import Flask, render_template, request, session, jsonify, url_for
 from datetime import datetime
 
 app = Flask(__name__)
@@ -27,9 +27,9 @@ def home():
 @app.route('/generate_qr')
 def generate_qr():
     global current_qr
-    current_qr = 'https://10.42.108.77:1008/scan?token='+generate_random_code()
+    current_qr = generate_random_code()
 
-    qr = qrcode.make(current_qr)
+    qr = qrcode.make(f"{url_for('mark_attendance', token=current_qr, _external=True)}")
     qr_path = "static/qrs/qr_code.png"
     qr.save(qr_path)
 
@@ -37,6 +37,8 @@ def generate_qr():
 
 @app.route('/mark_attendance', methods=['POST'])
 def mark_attendance():
+    token = request.args.get("token")
+    print(token, 'Heeeey')
     """Verify location & allow only one device per student per day."""
     data = request.json
     student_id = data.get('student_id')
